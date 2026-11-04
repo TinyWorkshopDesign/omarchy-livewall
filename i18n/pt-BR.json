@@ -1,0 +1,23 @@
+{
+  "bar.tooltip": "Fundos animados: pesquisar papéis de parede em vídeo",
+  "key.explain": "É necessária uma chave de API gratuita do Pixabay. Crie uma conta gratuita em pixabay.com e abra pixabay.com/api/docs com a sessão iniciada: a chave aparece na seção Parameters (key). Cole-a aqui. Ela fica salva em ~/.local/state/livewall/pixabay.key, legível só por você.",
+  "key.placeholder": "Chave de API do Pixabay",
+  "key.save": "Salvar chave",
+  "key.checking": "Verificando…",
+  "key.saved": "Chave salva.",
+  "search.busy": "Pesquisando…",
+  "footer.hint": "Clique: baixar e aplicar · clique direito: só baixar",
+  "footer.next": "Próxima ›",
+  "tile.downloading": "Baixando…",
+  "tile.downloadingPct": "Baixando… %1%",
+  "done.saved": "Salvo na pasta de fundos de %1.",
+  "error.empty_query": "Digite algo para pesquisar.",
+  "error.bad_key_format": "Não parece uma chave válida: copie-a inteira, sem espaços.",
+  "error.rate_limited": "Muitas solicitações: tente novamente em alguns minutos.",
+  "error.no_mp4": "Este vídeo não tem um arquivo MP4 utilizável.",
+  "error.bad_type": "Tipo de arquivo inesperado: %1",
+  "error.not_mp4": "O arquivo baixado não é um MP4.",
+  "error.io": "Não foi possível gravar o arquivo: %1",
+  "error.generic": "Algo deu errado.",
+  "quality.hint": "Destacado: o que cada monitor conectado precisa para ficar nítido."
+}

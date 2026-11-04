@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "tinyworkshop.livewall",
+  "name": "Livewall",
+  "version": "1.0.0",
+  "author": "Tiny Workshop Design",
+  "license": "MIT",
+  "description": "Search free video wallpapers on Pixabay and set them as your animated background with one click. Videos go into the current theme's backgrounds folder, played by Omarchy's background engine (owe). Open with: omarchy-shell shell toggle tinyworkshop.livewall",
+  "kinds": [
+    "panel",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "panel": "Panel.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Livewall",
+    "description": "Opens the video wallpaper search.",
+    "category": "Appearance",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
