@@ -45,7 +45,7 @@ CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "livewall"
 THUMB_DIR = CACHE_DIR / "thumbs"
 SEARCH_DIR = CACHE_DIR / "search"
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 UA = f"omarchy-livewall/{VERSION}"
 TIMEOUT = 20
 PER_PAGE = 24

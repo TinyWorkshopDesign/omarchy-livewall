@@ -2,7 +2,7 @@
 
 Search free video wallpapers on Pixabay from your Omarchy desktop and set one as your animated background with a single click.
 
-![Livewall panel showing a grid of aurora video results](docs/screenshot.png)
+![Livewall panel showing a grid of aurora video results](preview.png)
 
 Omarchy 4.5 can already play video backgrounds through its own engine, owe. Livewall adds the missing piece: a way to find and download videos. Each one is saved to the current theme's backgrounds folder, so it also appears in Omarchy's own background picker (`Super + Ctrl + Space`).
 
@@ -15,11 +15,14 @@ Omarchy 4.5 can already play video backgrounds through its own engine, owe. Live
 - Interface in English, Italian, German, French, Spanish, Portuguese (European and Brazilian), Dutch and Polish. It follows Omarchy's language live, and any other language falls back to English.
 - Videos you have already downloaded are marked ✓.
 
-## Requirements
+## Requirements and external dependencies
 
 - Omarchy 4.5 or later: video backgrounds are played by owe, Omarchy's background engine.
-- `python3`, which Omarchy already ships. Livewall uses only the standard library.
-- A free Pixabay API key (see below).
+- `python3`, which Omarchy already ships. Livewall uses only the standard library: no pip packages, no binaries, no installer and no background service.
+- `hyprctl` (part of Hyprland) to read the connected monitors, and `omarchy theme bg set` to apply a background.
+- A free Pixabay API key (see below). Pixabay is an external web service: searches and downloads go to `pixabay.com` and `cdn.pixabay.com`.
+
+Livewall never needs root, never changes your configuration on its own and only sets a background when you click a video.
 
 ## Install
 
@@ -40,6 +43,21 @@ To add an entry to the Omarchy menu, put this line in `~/.config/omarchy/extensi
 ```
 
 Update with `omarchy plugin update tinyworkshop.livewall`.
+
+## Remove
+
+```bash
+omarchy plugin remove tinyworkshop.livewall
+```
+
+This removes the plugin and its bar icon; Omarchy keeps a backup of the plugin folder. Your downloaded videos, saved key and cache are left alone. To delete them too:
+
+```bash
+rm -rf ~/.local/state/livewall ~/.cache/livewall
+rm -f ~/.config/omarchy/backgrounds/*/pixabay-*.mp4 ~/.config/omarchy/backgrounds/*/pexels-*.mp4
+```
+
+If you added the menu entry, delete the `install.style.livewall` line from `~/.config/omarchy/extensions/omarchy-menu.jsonc`.
 
 ## Getting a Pixabay key
 
