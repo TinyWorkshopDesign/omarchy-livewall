@@ -14,11 +14,14 @@ Omarchy 4.5 can already play video backgrounds through its own engine, owe. Live
 - Search in your own language. Pixabay understands 26 languages, and Livewall sends the one you picked in Omarchy's Setup > Language.
 - Interface in English, Italian, German, French, Spanish, Portuguese (European and Brazilian), Dutch and Polish. It follows Omarchy's language live, and any other language falls back to English.
 - Videos you have already downloaded are marked ✓.
+- **Downloaded** tab: every video already in your backgrounds folders, with thumbnail, length, resolution and size. Click one to set it, click the trash icon twice to delete it (the current background is protected). Filter by the current theme or show all themes.
+- **Add your own videos** (MP4, WebM, MKV, MOV, M4V) with *Add videos…*, which opens the desktop file chooser, or by dropping files from the file manager onto the panel. They are copied into the current theme's backgrounds folder; the originals stay where they are.
 
 ## Requirements and external dependencies
 
 - Omarchy 4.5 or later: video backgrounds are played by owe, Omarchy's background engine.
 - `python3`, which Omarchy already ships. Livewall uses only the standard library: no pip packages, no binaries, no installer and no background service.
+- `ffmpeg`/`ffprobe` (optional) for thumbnails and details of videos you add yourself.
 - `hyprctl` (part of Hyprland) to read the connected monitors, and `omarchy theme bg set` to apply a background.
 - A free Pixabay API key (see below). Pixabay is an external web service: searches and downloads go to `pixabay.com` and `cdn.pixabay.com`.
 
@@ -34,6 +37,12 @@ This adds a 󰕧 icon to the bar. You can also open the panel with:
 
 ```bash
 omarchy-shell shell toggle tinyworkshop.livewall
+```
+
+To open straight on the downloaded videos:
+
+```bash
+omarchy-shell shell toggle tinyworkshop.livewall '{"view":"library"}'
 ```
 
 To add an entry to the Omarchy menu, put this line in `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
@@ -75,7 +84,7 @@ The key is stored in `~/.local/state/livewall/pixabay.key` with mode `0600`.
 |---|---|
 | Downloaded videos | `~/.config/omarchy/backgrounds/<theme>/pixabay-<id>-<res>p-<name>.mp4` |
 | API keys, resolution choice | `~/.local/state/livewall/` |
-| Thumbnails, 24-hour search cache | `~/.cache/livewall/` |
+| Thumbnails, 24-hour search cache, video info | `~/.cache/livewall/` |
 
 Videos are large: 1–2 MB per second at 1080p, and more at 4K. Delete the ones you don't want from the backgrounds folder.
 

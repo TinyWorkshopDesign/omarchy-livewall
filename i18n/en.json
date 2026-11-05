@@ -43,5 +43,39 @@
   "error.generic": "Something went wrong.",
   "quality.label": "Resolution",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Outlined: what each connected monitor needs to stay sharp."
+  "quality.hint": "Outlined: what each connected monitor needs to stay sharp.",
+  "tab.search": "Search",
+  "tab.library": "Downloaded",
+  "header.theme": "Current theme: %1",
+  "library.themeOnly": "Theme %1",
+  "library.all": "All themes",
+  "library.summary": {
+    "one": "%1 video · %2",
+    "other": "%1 videos · %2"
+  },
+  "library.loading": "Loading…",
+  "library.add": "Add videos…",
+  "library.open": "Open folder",
+  "library.empty": "No videos here yet. Search for one, or add your own with “Add videos…” or by dropping files on this panel.",
+  "library.hint": "Click: set as background · 󰆴: delete (click twice) · drop video files here to add them",
+  "library.inUse": "In use",
+  "library.confirm": "Delete?",
+  "library.deleted": "Deleted %1.",
+  "library.applied": "Background set.",
+  "add.title": "Add videos as backgrounds",
+  "add.busy": "Copying…",
+  "add.done": {
+    "one": "Added %1 video to the %2 backgrounds.",
+    "other": "Added %1 videos to the %2 backgrounds."
+  },
+  "add.exists": "Already in the backgrounds folder.",
+  "add.skipped": {
+    "one": "%1 file skipped (not a video)",
+    "other": "%1 files skipped (not videos)"
+  },
+  "drop.hint": "Drop to add to the %1 backgrounds",
+  "error.bad_path": "That file is not in the backgrounds folders.",
+  "error.in_use": "This is the current background: set another one first.",
+  "error.apply_failed": "Could not set the background.",
+  "error.not_video": "Not a video file: %1"
 }

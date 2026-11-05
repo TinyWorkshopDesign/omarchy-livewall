@@ -10,6 +10,10 @@ Usage (every answer is one JSON object per line on stdout):
   livewall.py search <text> [page] [lang] [quality]
   livewall.py download <id> [--apply] [--quality <q>]
   livewall.py set-quality <auto|720|1080|1440|2160>
+  livewall.py library                    videos already in the backgrounds folders, every theme
+  livewall.py apply <path>               set one of those videos as the background
+  livewall.py delete <path>              delete one of them (never the current background)
+  livewall.py add [--apply] <path>...    copy your own videos into the current theme's folder
 
 lang is an ISO 639-1 code for the search terms. quality is the video
 height class to download; "auto" covers every connected monitor (read
@@ -28,6 +32,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -45,7 +50,7 @@ CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "livewall"
 THUMB_DIR = CACHE_DIR / "thumbs"
 SEARCH_DIR = CACHE_DIR / "search"
 
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 UA = f"omarchy-livewall/{VERSION}"
 TIMEOUT = 20
 PER_PAGE = 24
@@ -534,6 +539,271 @@ def cmd_download(vid, apply, quality="auto"):
     out({"ok": True, "path": str(dest), "width": w, "height": h, "applied": applied})
 
 
+# ---------------------------------------------------------------- library
+# Videos already on disk, in every theme's backgrounds folder. Thumbnails
+# come from the search cache when the video was found through Livewall,
+# otherwise one frame is taken with ffmpeg (if installed) and cached.
+CURRENT_BG = HOME / ".local/state/omarchy/current/background"
+LIB_THUMB_DIR = CACHE_DIR / "library"
+LIB_META = CACHE_DIR / "library.json"
+VIDEO_EXT = {".mp4", ".webm", ".mkv", ".mov", ".m4v"}
+MAX_LIBRARY = 500
+MAX_ADD = 50
+NAME_RE = re.compile(r"^(pixabay|pexels)-(\d{1,12})(?:-(\d{3,4})p)?(?:-([a-z0-9-]+))?$")
+
+
+def _resolve(p):
+    try:
+        return Path(p).resolve(strict=False)
+    except (OSError, RuntimeError):
+        return None
+
+
+def current_background():
+    r = _resolve(CURRENT_BG)
+    return r if r and CURRENT_BG.is_symlink() else None
+
+
+def is_video_name(p):
+    return p.suffix.lower() in VIDEO_EXT and not p.name.startswith(".")
+
+
+def library_files():
+    """[(shown_path, real_path, stat)] for every finished video under BG_ROOT, newest first."""
+    res = []
+    if not BG_ROOT.is_dir():
+        return res
+    for d in sorted(BG_ROOT.iterdir()):
+        if not d.is_dir():
+            continue
+        for f in d.iterdir():
+            if not is_video_name(f) or not f.is_file():
+                continue
+            try:
+                st = f.stat()
+            except OSError:
+                continue
+            res.append((f, _resolve(f), st))
+    res.sort(key=lambda x: x[2].st_mtime, reverse=True)
+    return res[:MAX_LIBRARY]
+
+
+def known_titles():
+    """id -> (title, author) from cached searches, for videos found with Livewall."""
+    titles = {}
+    if not SEARCH_DIR.is_dir():
+        return titles
+    for c in SEARCH_DIR.glob("*.json"):
+        try:
+            for r in json.loads(c.read_text()).get("raw") or []:
+                vid = _int(r.get("id"))
+                if vid > 0 and r.get("title"):
+                    titles[vid] = (str(r["title"])[:60], str(r.get("author") or "")[:60])
+        except (OSError, ValueError, AttributeError, TypeError):
+            continue
+    return titles
+
+
+def probe(path):
+    """(width, height, seconds) of the first video stream; zeros if there is none or ffprobe is missing."""
+    try:
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                            "-show_entries", "stream=width,height:format=duration", "-of", "json", str(path)],
+                           capture_output=True, text=True, timeout=15)
+        d = json.loads(r.stdout or "{}")
+        s = (d.get("streams") or [{}])[0]
+        return _int(s.get("width")), _int(s.get("height")), round(float((d.get("format") or {}).get("duration") or 0))
+    except (OSError, subprocess.TimeoutExpired, ValueError, TypeError, IndexError):
+        return 0, 0, 0
+
+
+def frame_thumb(path, dest, seconds):
+    """One frame of the video as a 480 px JPEG; "" on failure."""
+    if dest.is_file() and dest.stat().st_size > 0:
+        return str(dest)
+    tmp = dest.with_name(dest.stem + ".tmp.jpg")
+    at = str(min(2.0, seconds / 3)) if seconds > 0 else "0"
+    try:
+        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", at, "-i", str(path),
+                        "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", str(tmp)],
+                       capture_output=True, timeout=30)
+        if tmp.is_file() and tmp.stat().st_size > 0:
+            tmp.replace(dest)
+            return str(dest)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    tmp.unlink(missing_ok=True)
+    return ""
+
+
+def _sig(real, st):
+    return hashlib.sha256(f"{real}\0{st.st_size}\0{int(st.st_mtime)}".encode()).hexdigest()[:24]
+
+
+def library_item(shown, real, st, meta, titles, current, theme):
+    sig = _sig(real, st)
+    m = meta.get(sig)
+    if not (isinstance(m, list) and len(m) == 3):
+        m = list(probe(real))
+    w, h, dur = (_int(x) for x in m)
+    stem = shown.stem
+    nm = NAME_RE.match(stem)
+    provider, vid, title, author = "", 0, "", ""
+    if nm:
+        provider, vid = nm.group(1), int(nm.group(2))
+        title, author = titles.get(vid, ("", ""))
+        if not title and nm.group(4):
+            title = nm.group(4).replace("-", " ")[:60]
+    if not title:
+        title = re.sub(r"[-_]+", " ", stem).strip()[:60]
+    thumb = ""
+    if provider:
+        t = THUMB_DIR / f"{provider}-{vid}.jpg"
+        if t.is_file() and t.stat().st_size > 0:
+            thumb = str(t)
+    if not thumb:
+        thumb = frame_thumb(real, LIB_THUMB_DIR / f"{sig}.jpg", dur)
+    return sig, [w, h, dur], {
+        "path": str(real), "name": shown.name[:120], "theme": shown.parent.name[:60],
+        "size": st.st_size, "mtime": int(st.st_mtime), "width": w, "height": h, "duration": dur,
+        "thumb": thumb, "title": title, "author": author, "provider": provider, "id": vid,
+        "current": current is not None and real == current, "inTheme": shown.parent.name == theme,
+    }
+
+
+def cmd_library():
+    theme = theme_slug()
+    current = current_background()
+    files = library_files()
+    try:
+        meta = json.loads(LIB_META.read_text())
+        meta = meta if isinstance(meta, dict) else {}
+    except (OSError, ValueError):
+        meta = {}
+    titles = known_titles()
+    LIB_THUMB_DIR.mkdir(parents=True, exist_ok=True)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        done = list(pool.map(lambda x: library_item(*x, meta, titles, current, theme), files))
+    new_meta = {sig: m for sig, m, _ in done}
+    if new_meta != meta:
+        try:
+            tmp = LIB_META.with_suffix(".part")
+            tmp.write_text(json.dumps(new_meta))
+            tmp.replace(LIB_META)
+        except OSError:
+            pass
+    items = [it for _, _, it in done]
+    out({"ok": True, "theme": theme, "dir": str(BG_ROOT / theme), "current": str(current or ""),
+         "totalSize": sum(it["size"] for it in items), "items": items})
+
+
+def library_path(arg):
+    """The video named by arg, only if it is a finished video inside BG_ROOT."""
+    real, root = _resolve(arg), _resolve(BG_ROOT)
+    if not real or not root or root not in real.parents or not is_video_name(real) or not real.is_file():
+        fail("bad_path")
+    return real
+
+
+def set_background(path):
+    try:
+        r = subprocess.run(["omarchy", "theme", "bg", "set", str(path)], capture_output=True, text=True, timeout=30)
+        return r.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def cmd_apply(arg):
+    path = library_path(arg)
+    if not set_background(path):
+        fail("apply_failed")
+    out({"ok": True, "path": str(path), "applied": True})
+
+
+def cmd_delete(arg):
+    path = library_path(arg)
+    if path == current_background():
+        fail("in_use")
+    try:
+        st = path.stat()
+        path.unlink()
+    except OSError as e:
+        fail("io", e.strerror or e)
+    (LIB_THUMB_DIR / f"{_sig(path, st)}.jpg").unlink(missing_ok=True)
+    out({"ok": True, "path": str(path), "deleted": True, "size": st.st_size})
+
+
+def safe_name(name):
+    """A plain file name for a copied video: no path parts, no leading dot, known extension."""
+    p = Path(name)
+    stem = re.sub(r"[^\w.-]+", "-", p.stem, flags=re.UNICODE).strip(".-")[:80] or "video"
+    return stem + p.suffix.lower()
+
+
+def add_one(src_arg, dest_dir):
+    """Copy one video into dest_dir. Returns (status, path): added, exists, or an error code."""
+    src = Path(src_arg)
+    if src_arg.startswith("file://"):
+        src = Path(urllib.parse.unquote(urllib.parse.urlparse(src_arg).path))
+    src = _resolve(src)
+    if not src or not src.is_file():
+        return "not_found", src_arg
+    if not is_video_name(src):
+        return "not_video", src.name
+    root = _resolve(BG_ROOT)
+    if root in src.parents:
+        return "exists", str(src)
+    w, h, _ = probe(src)
+    if (w <= 0 or h <= 0) and shutil.which("ffprobe"):
+        return "not_video", src.name
+    size = src.stat().st_size
+    name = safe_name(src.name)
+    dest = dest_dir / name
+    n = 2
+    while dest.exists():
+        if dest.is_file() and dest.stat().st_size == size:
+            return "exists", str(dest)
+        dest = dest_dir / f"{Path(name).stem}-{n}{Path(name).suffix}"
+        n += 1
+    tmp = dest_dir / f".{dest.name}.part"
+    try:
+        shutil.copyfile(src, tmp)
+        tmp.replace(dest)
+    except OSError as e:
+        tmp.unlink(missing_ok=True)
+        return "io", e.strerror or str(e)
+    return "added", str(dest)
+
+
+def cmd_add(args):
+    """Copy videos the user picked into the current theme's backgrounds folder."""
+    apply = "--apply" in args
+    srcs = [a for a in args if a != "--apply"][:MAX_ADD]
+    if not srcs:
+        fail("usage")
+    dest_dir = BG_ROOT / theme_slug()
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        fail("io", e.strerror or e)
+    added, existing, errors = [], [], []
+    for s in srcs:
+        status, info = add_one(s, dest_dir)
+        if status == "added":
+            added.append(info)
+        elif status == "exists":
+            existing.append(info)
+        else:
+            errors.append({"code": status, "detail": str(info)[:200]})
+    if not added and not existing:
+        e = errors[0] if errors else {"code": "generic", "detail": ""}
+        fail(e["code"], e["detail"])
+    applied = False
+    if apply and len(srcs) == 1:
+        applied = set_background((added or existing)[0])
+    out({"ok": True, "added": added, "existing": existing, "errors": errors, "applied": applied})
+
+
 # ------------------------------------------------------------------- main
 def main(argv):
     if not argv:
@@ -552,6 +822,14 @@ def main(argv):
         cmd_download(args[0], "--apply" in rest, quality)
     elif cmd == "set-quality" and args:
         cmd_set_quality(args[0])
+    elif cmd == "library":
+        cmd_library()
+    elif cmd == "apply" and args:
+        cmd_apply(args[0])
+    elif cmd == "delete" and args:
+        cmd_delete(args[0])
+    elif cmd == "add" and args:
+        cmd_add(args)
     elif cmd in ("--version", "version"):
         out({"ok": True, "version": VERSION})
     else:

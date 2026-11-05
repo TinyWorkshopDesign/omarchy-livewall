@@ -5,9 +5,11 @@ No network access: providers are fed recorded-style data.
 """
 
 import importlib.util
+import io
 import json
 import re
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -160,6 +162,120 @@ class Untrusted(unittest.TestCase):
                 self.assertIn("Text.PlainText", m.group(1))
         self.assertNotIn("RichText", "".join(p.read_text() for p in ROOT.glob("*.qml")))
         self.assertNotIn("StyledText", "".join(p.read_text() for p in ROOT.glob("*.qml")))
+
+
+class Library(unittest.TestCase):
+    """library / apply / delete / add, in a throwaway home: never the real backgrounds."""
+
+    MP4 = b"\0\0\0\x18ftypmp42" + b"\0" * 64
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        t = Path(self.tmp.name)
+        self.bg = t / "backgrounds"
+        (self.bg / "nord").mkdir(parents=True)
+        (self.bg / "matrix").mkdir()
+        (self.bg / "nord" / "pixabay-125-1080p-ocean-sea.mp4").write_bytes(self.MP4)
+        (self.bg / "nord" / "pixabay-126-1080p.mp4.part").write_bytes(self.MP4)
+        (self.bg / "nord" / "image.jpg").write_bytes(b"x")
+        (self.bg / "matrix" / "mine.webm").write_bytes(self.MP4)
+        self.current = t / "current-background"
+        self.current.symlink_to(self.bg / "nord" / "pixabay-125-1080p-ocean-sea.mp4")
+        theme = t / "theme.name"
+        theme.write_text("Nord\n")
+        self.outside = t / "Videos"
+        self.outside.mkdir()
+        self.patches = [
+            mock.patch.object(lw, "BG_ROOT", self.bg),
+            mock.patch.object(lw, "CURRENT_BG", self.current),
+            mock.patch.object(lw, "THEME_NAME_FILE", theme),
+            mock.patch.object(lw, "CACHE_DIR", t / "cache"),
+            mock.patch.object(lw, "THUMB_DIR", t / "cache/thumbs"),
+            mock.patch.object(lw, "SEARCH_DIR", t / "cache/search"),
+            mock.patch.object(lw, "LIB_THUMB_DIR", t / "cache/library"),
+            mock.patch.object(lw, "LIB_META", t / "cache/library.json"),
+            # No ffmpeg in tests: probe and thumbnails are faked.
+            mock.patch.object(lw, "probe", return_value=(1920, 1080, 12)),
+            mock.patch.object(lw, "frame_thumb", return_value=""),
+            mock.patch.object(lw, "set_background", return_value=True),
+        ]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def run_cmd(self, fn, *args):
+        buf = io.StringIO()
+        code = 0
+        with mock.patch("sys.stdout", buf):
+            try:
+                fn(*args)
+            except SystemExit as e:
+                code = e.code
+        return json.loads(buf.getvalue().strip().splitlines()[-1]), code
+
+    def test_library_lists_finished_videos_of_every_theme(self):
+        r, _ = self.run_cmd(lw.cmd_library)
+        names = sorted(i["name"] for i in r["items"])
+        self.assertEqual(names, ["mine.webm", "pixabay-125-1080p-ocean-sea.mp4"])
+        by = {i["name"]: i for i in r["items"]}
+        self.assertTrue(by["pixabay-125-1080p-ocean-sea.mp4"]["current"])
+        self.assertTrue(by["pixabay-125-1080p-ocean-sea.mp4"]["inTheme"])
+        self.assertEqual(by["pixabay-125-1080p-ocean-sea.mp4"]["title"], "ocean sea")
+        self.assertFalse(by["mine.webm"]["inTheme"])
+        self.assertEqual(by["mine.webm"]["title"], "mine")
+
+    def test_apply_and_delete_refuse_paths_outside(self):
+        other = self.outside / "x.mp4"
+        other.write_bytes(self.MP4)
+        for fn in (lw.cmd_apply, lw.cmd_delete):
+            r, code = self.run_cmd(fn, str(other))
+            self.assertEqual((r["code"], code), ("bad_path", 1))
+            r, _ = self.run_cmd(fn, str(self.bg / "nord" / ".." / ".." / "Videos" / "x.mp4"))
+            self.assertEqual(r["code"], "bad_path")
+        r, _ = self.run_cmd(lw.cmd_delete, str(self.bg / "nord" / "image.jpg"))
+        self.assertEqual(r["code"], "bad_path")
+        self.assertTrue(other.exists())
+
+    def test_delete_keeps_the_current_background(self):
+        cur = self.bg / "nord" / "pixabay-125-1080p-ocean-sea.mp4"
+        r, _ = self.run_cmd(lw.cmd_delete, str(cur))
+        self.assertEqual(r["code"], "in_use")
+        self.assertTrue(cur.exists())
+        r, _ = self.run_cmd(lw.cmd_delete, str(self.bg / "matrix" / "mine.webm"))
+        self.assertTrue(r["deleted"])
+        self.assertFalse((self.bg / "matrix" / "mine.webm").exists())
+
+    def test_add_copies_into_current_theme(self):
+        src = self.outside / "My clip (1).MP4"
+        src.write_bytes(self.MP4)
+        r, _ = self.run_cmd(lw.cmd_add, [str(src)])
+        self.assertEqual(len(r["added"]), 1)
+        dest = Path(r["added"][0])
+        self.assertEqual(dest.parent, self.bg / "nord")
+        self.assertEqual(dest.name, "My-clip-1.mp4")
+        self.assertTrue(src.exists())          # copied, not moved
+        # Same file again: recognised, not duplicated.
+        r, _ = self.run_cmd(lw.cmd_add, ["file://" + str(src).replace(" ", "%20")])
+        self.assertEqual((r["added"], len(r["existing"])), ([], 1))
+
+    def test_add_skips_non_videos(self):
+        txt = self.outside / "notes.txt"
+        txt.write_text("x")
+        vid = self.outside / "ok.mp4"
+        vid.write_bytes(self.MP4)
+        r, _ = self.run_cmd(lw.cmd_add, [str(txt), str(vid), str(self.outside / "missing.mp4")])
+        self.assertEqual(len(r["added"]), 1)
+        self.assertEqual(sorted(e["code"] for e in r["errors"]), ["not_found", "not_video"])
+        r, code = self.run_cmd(lw.cmd_add, [str(txt)])
+        self.assertEqual((r["code"], code), ("not_video", 1))
+
+    def test_safe_name(self):
+        self.assertEqual(lw.safe_name("../../.bashrc.mp4"), "bashrc.mp4")
+        self.assertEqual(lw.safe_name("città di notte.MOV"), "città-di-notte.mov")
 
 
 class Catalogs(unittest.TestCase):

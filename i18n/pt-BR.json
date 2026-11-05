@@ -19,5 +19,17 @@
   "error.not_mp4": "O arquivo baixado não é um MP4.",
   "error.io": "Não foi possível gravar o arquivo: %1",
   "error.generic": "Algo deu errado.",
-  "quality.hint": "Destacado: o que cada monitor conectado precisa para ficar nítido."
+  "quality.hint": "Destacado: o que cada monitor conectado precisa para ficar nítido.",
+  "tab.library": "Baixados",
+  "library.loading": "Carregando…",
+  "library.empty": "Ainda não há vídeos aqui. Pesquise um, ou adicione os seus com “Adicionar vídeos…” ou arrastando arquivos para este painel.",
+  "library.hint": "Clique: definir como fundo · 󰆴: apagar (dois cliques) · arraste vídeos aqui para adicioná-los",
+  "add.busy": "Copiando…",
+  "add.skipped": {
+    "one": "%1 arquivo ignorado (não é um vídeo)",
+    "other": "%1 arquivos ignorados (não são vídeos)"
+  },
+  "drop.hint": "Solte para adicionar aos fundos de %1",
+  "error.bad_path": "Esse arquivo não está nas pastas de fundos.",
+  "error.not_video": "Não é um arquivo de vídeo: %1"
 }

@@ -43,5 +43,39 @@
   "error.generic": "Une erreur s'est produite.",
   "quality.label": "Résolution",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Encadré : ce dont chaque écran branché a besoin pour rester net."
+  "quality.hint": "Encadré : ce dont chaque écran branché a besoin pour rester net.",
+  "tab.search": "Recherche",
+  "tab.library": "Téléchargés",
+  "header.theme": "Thème actuel : %1",
+  "library.themeOnly": "Thème %1",
+  "library.all": "Tous les thèmes",
+  "library.summary": {
+    "one": "%1 vidéo · %2",
+    "other": "%1 vidéos · %2"
+  },
+  "library.loading": "Chargement…",
+  "library.add": "Ajouter des vidéos…",
+  "library.open": "Ouvrir le dossier",
+  "library.empty": "Aucune vidéo ici pour l’instant. Cherchez-en une, ou ajoutez les vôtres avec « Ajouter des vidéos… » ou en déposant des fichiers sur ce panneau.",
+  "library.hint": "Clic : définir comme fond · 󰆴 : supprimer (deux clics) · déposez des vidéos ici pour les ajouter",
+  "library.inUse": "Actif",
+  "library.confirm": "Supprimer ?",
+  "library.deleted": "%1 supprimé.",
+  "library.applied": "Fond d’écran défini.",
+  "add.title": "Ajouter des vidéos comme fonds",
+  "add.busy": "Copie…",
+  "add.done": {
+    "one": "%1 vidéo ajoutée aux fonds de %2.",
+    "other": "%1 vidéos ajoutées aux fonds de %2."
+  },
+  "add.exists": "Déjà dans le dossier des fonds.",
+  "add.skipped": {
+    "one": "%1 fichier ignoré (pas une vidéo)",
+    "other": "%1 fichiers ignorés (pas des vidéos)"
+  },
+  "drop.hint": "Déposez pour ajouter aux fonds de %1",
+  "error.bad_path": "Ce fichier n’est pas dans les dossiers des fonds.",
+  "error.in_use": "C’est le fond actuel : choisissez-en d’abord un autre.",
+  "error.apply_failed": "Impossible de définir le fond.",
+  "error.not_video": "Pas un fichier vidéo : %1"
 }

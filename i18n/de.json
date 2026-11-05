@@ -43,5 +43,39 @@
   "error.generic": "Etwas ist schiefgelaufen.",
   "quality.label": "Auflösung",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Hervorgehoben: was jeder angeschlossene Monitor braucht, um scharf zu bleiben."
+  "quality.hint": "Hervorgehoben: was jeder angeschlossene Monitor braucht, um scharf zu bleiben.",
+  "tab.search": "Suche",
+  "tab.library": "Heruntergeladen",
+  "header.theme": "Aktuelles Theme: %1",
+  "library.themeOnly": "Theme %1",
+  "library.all": "Alle Themes",
+  "library.summary": {
+    "one": "%1 Video · %2",
+    "other": "%1 Videos · %2"
+  },
+  "library.loading": "Wird geladen…",
+  "library.add": "Videos hinzufügen…",
+  "library.open": "Ordner öffnen",
+  "library.empty": "Noch keine Videos hier. Suche eines oder füge eigene mit „Videos hinzufügen…“ hinzu oder ziehe Dateien auf dieses Fenster.",
+  "library.hint": "Klick: als Hintergrund setzen · 󰆴: löschen (zweimal klicken) · Videodateien hierher ziehen, um sie hinzuzufügen",
+  "library.inUse": "Aktiv",
+  "library.confirm": "Löschen?",
+  "library.deleted": "%1 gelöscht.",
+  "library.applied": "Hintergrund gesetzt.",
+  "add.title": "Videos als Hintergründe hinzufügen",
+  "add.busy": "Kopiere…",
+  "add.done": {
+    "one": "%1 Video zu den Hintergründen von %2 hinzugefügt.",
+    "other": "%1 Videos zu den Hintergründen von %2 hinzugefügt."
+  },
+  "add.exists": "Schon im Hintergrundordner.",
+  "add.skipped": {
+    "one": "%1 Datei übersprungen (kein Video)",
+    "other": "%1 Dateien übersprungen (keine Videos)"
+  },
+  "drop.hint": "Loslassen, um sie zu den Hintergründen von %1 hinzuzufügen",
+  "error.bad_path": "Diese Datei liegt nicht in den Hintergrundordnern.",
+  "error.in_use": "Das ist der aktuelle Hintergrund: setze zuerst einen anderen.",
+  "error.apply_failed": "Der Hintergrund konnte nicht gesetzt werden.",
+  "error.not_video": "Keine Videodatei: %1"
 }

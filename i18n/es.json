@@ -43,5 +43,39 @@
   "error.generic": "Algo salió mal.",
   "quality.label": "Resolución",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Resaltado: lo que necesita cada monitor conectado para verse nítido."
+  "quality.hint": "Resaltado: lo que necesita cada monitor conectado para verse nítido.",
+  "tab.search": "Buscar",
+  "tab.library": "Descargados",
+  "header.theme": "Tema actual: %1",
+  "library.themeOnly": "Tema %1",
+  "library.all": "Todos los temas",
+  "library.summary": {
+    "one": "%1 vídeo · %2",
+    "other": "%1 vídeos · %2"
+  },
+  "library.loading": "Cargando…",
+  "library.add": "Añadir vídeos…",
+  "library.open": "Abrir carpeta",
+  "library.empty": "Aún no hay vídeos aquí. Busca uno, o añade los tuyos con «Añadir vídeos…» o arrastrando archivos a este panel.",
+  "library.hint": "Clic: poner como fondo · 󰆴: borrar (dos clics) · arrastra vídeos aquí para añadirlos",
+  "library.inUse": "En uso",
+  "library.confirm": "¿Borrar?",
+  "library.deleted": "%1 borrado.",
+  "library.applied": "Fondo aplicado.",
+  "add.title": "Añadir vídeos como fondos",
+  "add.busy": "Copiando…",
+  "add.done": {
+    "one": "%1 vídeo añadido a los fondos de %2.",
+    "other": "%1 vídeos añadidos a los fondos de %2."
+  },
+  "add.exists": "Ya está en la carpeta de fondos.",
+  "add.skipped": {
+    "one": "%1 archivo omitido (no es un vídeo)",
+    "other": "%1 archivos omitidos (no son vídeos)"
+  },
+  "drop.hint": "Suelta para añadir a los fondos de %1",
+  "error.bad_path": "Ese archivo no está en las carpetas de fondos.",
+  "error.in_use": "Es el fondo actual: pon otro primero.",
+  "error.apply_failed": "No se pudo aplicar el fondo.",
+  "error.not_video": "No es un archivo de vídeo: %1"
 }

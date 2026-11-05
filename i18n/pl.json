@@ -45,5 +45,45 @@
   "error.generic": "Coś poszło nie tak.",
   "quality.label": "Rozdzielczość",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Wyróżnione: czego potrzebuje każdy podłączony monitor, by obraz był ostry."
+  "quality.hint": "Wyróżnione: czego potrzebuje każdy podłączony monitor, by obraz był ostry.",
+  "tab.search": "Szukaj",
+  "tab.library": "Pobrane",
+  "header.theme": "Bieżący motyw: %1",
+  "library.themeOnly": "Motyw %1",
+  "library.all": "Wszystkie motywy",
+  "library.summary": {
+    "one": "%1 film · %2",
+    "few": "%1 filmy · %2",
+    "many": "%1 filmów · %2",
+    "other": "%1 filmu · %2"
+  },
+  "library.loading": "Wczytywanie…",
+  "library.add": "Dodaj filmy…",
+  "library.open": "Otwórz folder",
+  "library.empty": "Nie ma tu jeszcze filmów. Wyszukaj jakiś albo dodaj własne przyciskiem „Dodaj filmy…” lub przeciągając pliki na ten panel.",
+  "library.hint": "Kliknięcie: ustaw jako tło · 󰆴: usuń (dwa kliknięcia) · przeciągnij tu filmy, aby je dodać",
+  "library.inUse": "W użyciu",
+  "library.confirm": "Usunąć?",
+  "library.deleted": "Usunięto %1.",
+  "library.applied": "Tło ustawione.",
+  "add.title": "Dodaj filmy jako tła",
+  "add.busy": "Kopiowanie…",
+  "add.done": {
+    "one": "Dodano %1 film do teł motywu %2.",
+    "few": "Dodano %1 filmy do teł motywu %2.",
+    "many": "Dodano %1 filmów do teł motywu %2.",
+    "other": "Dodano %1 filmu do teł motywu %2."
+  },
+  "add.exists": "Już jest w folderze teł.",
+  "add.skipped": {
+    "one": "Pominięto %1 plik (to nie film)",
+    "few": "Pominięto %1 pliki (to nie filmy)",
+    "many": "Pominięto %1 plików (to nie filmy)",
+    "other": "Pominięto %1 pliku (to nie filmy)"
+  },
+  "drop.hint": "Upuść, aby dodać do teł motywu %1",
+  "error.bad_path": "Ten plik nie jest w folderach teł.",
+  "error.in_use": "To jest bieżące tło: najpierw ustaw inne.",
+  "error.apply_failed": "Nie udało się ustawić tła.",
+  "error.not_video": "To nie jest plik wideo: %1"
 }

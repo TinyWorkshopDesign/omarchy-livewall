@@ -43,5 +43,39 @@
   "error.generic": "Qualcosa è andato storto.",
   "quality.label": "Risoluzione",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Bordo evidenziato: la risoluzione che serve a ogni monitor collegato per restare nitido."
+  "quality.hint": "Bordo evidenziato: la risoluzione che serve a ogni monitor collegato per restare nitido.",
+  "tab.search": "Cerca",
+  "tab.library": "Scaricati",
+  "header.theme": "Tema attuale: %1",
+  "library.themeOnly": "Tema %1",
+  "library.all": "Tutti i temi",
+  "library.summary": {
+    "one": "%1 video · %2",
+    "other": "%1 video · %2"
+  },
+  "library.loading": "Carico…",
+  "library.add": "Aggiungi video…",
+  "library.open": "Apri cartella",
+  "library.empty": "Qui non ci sono ancora video. Cercane uno, oppure aggiungi i tuoi con «Aggiungi video…» o trascinando i file su questo pannello.",
+  "library.hint": "Clic: imposta come sfondo · 󰆴: elimina (due clic) · trascina qui i tuoi video per aggiungerli",
+  "library.inUse": "In uso",
+  "library.confirm": "Eliminare?",
+  "library.deleted": "Eliminato %1.",
+  "library.applied": "Sfondo impostato.",
+  "add.title": "Aggiungi video come sfondi",
+  "add.busy": "Copio…",
+  "add.done": {
+    "one": "Aggiunto %1 video agli sfondi di %2.",
+    "other": "Aggiunti %1 video agli sfondi di %2."
+  },
+  "add.exists": "Già presente nella cartella sfondi.",
+  "add.skipped": {
+    "one": "%1 file saltato (non è un video)",
+    "other": "%1 file saltati (non sono video)"
+  },
+  "drop.hint": "Rilascia per aggiungere agli sfondi di %1",
+  "error.bad_path": "Il file non è nelle cartelle sfondi.",
+  "error.in_use": "È lo sfondo attuale: prima impostane un altro.",
+  "error.apply_failed": "Impossibile impostare lo sfondo.",
+  "error.not_video": "Non è un file video: %1"
 }

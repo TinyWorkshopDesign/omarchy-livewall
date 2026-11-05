@@ -43,5 +43,39 @@
   "error.generic": "Er is iets misgegaan.",
   "quality.label": "Resolutie",
   "quality.auto": "Auto · %1",
-  "quality.hint": "Omlijnd: wat elke aangesloten monitor nodig heeft om scherp te blijven."
+  "quality.hint": "Omlijnd: wat elke aangesloten monitor nodig heeft om scherp te blijven.",
+  "tab.search": "Zoeken",
+  "tab.library": "Gedownload",
+  "header.theme": "Huidig thema: %1",
+  "library.themeOnly": "Thema %1",
+  "library.all": "Alle thema's",
+  "library.summary": {
+    "one": "%1 video · %2",
+    "other": "%1 video's · %2"
+  },
+  "library.loading": "Laden…",
+  "library.add": "Video's toevoegen…",
+  "library.open": "Map openen",
+  "library.empty": "Hier staan nog geen video's. Zoek er een, of voeg je eigen toe met ‘Video's toevoegen…’ of door bestanden op dit paneel te slepen.",
+  "library.hint": "Klik: als achtergrond instellen · 󰆴: verwijderen (twee keer klikken) · sleep video's hierheen om ze toe te voegen",
+  "library.inUse": "In gebruik",
+  "library.confirm": "Verwijderen?",
+  "library.deleted": "%1 verwijderd.",
+  "library.applied": "Achtergrond ingesteld.",
+  "add.title": "Video's als achtergrond toevoegen",
+  "add.busy": "Kopiëren…",
+  "add.done": {
+    "one": "%1 video toegevoegd aan de achtergronden van %2.",
+    "other": "%1 video's toegevoegd aan de achtergronden van %2."
+  },
+  "add.exists": "Staat al in de achtergrondmap.",
+  "add.skipped": {
+    "one": "%1 bestand overgeslagen (geen video)",
+    "other": "%1 bestanden overgeslagen (geen video's)"
+  },
+  "drop.hint": "Loslaten om toe te voegen aan de achtergronden van %1",
+  "error.bad_path": "Dat bestand staat niet in de achtergrondmappen.",
+  "error.in_use": "Dit is de huidige achtergrond: stel eerst een andere in.",
+  "error.apply_failed": "Kon de achtergrond niet instellen.",
+  "error.not_video": "Geen videobestand: %1"
 }
