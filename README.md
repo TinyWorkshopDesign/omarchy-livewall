@@ -97,6 +97,8 @@ If your `~/.config` is a git repository (dotfiles), add `*.mp4` under `omarchy/b
 - Searches are cached for 24 hours, as Pixabay's API terms ask. Repeating a search costs no requests.
 - Responses, thumbnails and videos have size limits. A download is kept only if it really is an MP4.
 - All text that comes from the network is shown as plain text, never as rich text. No user input ever goes through a shell.
+- Videos you add are copied as private files (readable only by you), and thumbnails, video details and the search cache in `~/.cache/livewall/` are private too. Livewall 1.1.1 also tightens a cache left readable by 1.1.0.
+- `ffmpeg`/`ffprobe` read local files only: a file that is really a playlist cannot make them fetch anything from the network.
 
 ## Licensing of the videos
 

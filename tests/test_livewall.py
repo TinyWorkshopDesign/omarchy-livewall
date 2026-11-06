@@ -7,6 +7,7 @@ No network access: providers are fed recorded-style data.
 import importlib.util
 import io
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -18,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location("livewall", ROOT / "livewall.py")
 lw = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(lw)
+REAL_FRAME_THUMB = lw.frame_thumb   # Library tests replace it with a stub
 
 
 PIXABAY_HIT = {
@@ -272,6 +274,85 @@ class Library(unittest.TestCase):
         self.assertEqual(sorted(e["code"] for e in r["errors"]), ["not_found", "not_video"])
         r, code = self.run_cmd(lw.cmd_add, [str(txt)])
         self.assertEqual((r["code"], code), ("not_video", 1))
+
+    def mode(self, p):
+        return os.stat(p).st_mode & 0o777
+
+    def test_add_copy_is_private_whatever_the_umask(self):
+        old = os.umask(0o022)
+        try:
+            for i, src_mode in enumerate((0o600, 0o644)):
+                src = self.outside / f"clip{i}.mp4"
+                src.write_bytes(self.MP4 + bytes([i]))
+                os.chmod(src, src_mode)
+                r, _ = self.run_cmd(lw.cmd_add, [str(src)])
+                self.assertEqual(self.mode(r["added"][0]), 0o600, oct(src_mode))
+        finally:
+            os.umask(old)
+
+    def test_add_makes_a_new_theme_folder_private(self):
+        (Path(self.tmp.name) / "theme.name").write_text("Brand New\n")
+        src = self.outside / "a.mp4"
+        src.write_bytes(self.MP4)
+        old = os.umask(0o022)
+        try:
+            r, _ = self.run_cmd(lw.cmd_add, [str(src)])
+        finally:
+            os.umask(old)
+        self.assertEqual(self.mode(self.bg / "brand-new"), 0o700)
+        self.assertEqual(Path(r["added"][0]).parent, self.bg / "brand-new")
+        # An existing Omarchy folder is not touched.
+        os.chmod(self.bg / "nord", 0o755)
+        (Path(self.tmp.name) / "theme.name").write_text("Nord\n")
+        self.run_cmd(lw.cmd_add, [str(src)])
+        self.assertEqual(self.mode(self.bg / "nord"), 0o755)
+
+    def test_library_cache_is_private_and_old_files_are_tightened(self):
+        cache = Path(self.tmp.name) / "cache"
+        (cache / "library").mkdir(parents=True, mode=0o755)
+        (cache / "search").mkdir(mode=0o755)
+        old_thumb = cache / "library" / "old.jpg"
+        old_thumb.write_bytes(b"jpg")
+        os.chmod(cache, 0o755)
+        os.chmod(cache / "library", 0o755)
+        os.chmod(old_thumb, 0o644)
+        target = self.outside / "elsewhere.txt"          # symlinks are not followed
+        target.write_text("x")
+        os.chmod(target, 0o644)
+        (cache / "library" / "link.jpg").symlink_to(target)
+        self.run_cmd(lw.cmd_library)
+        for d in ("", "library", "search", "thumbs"):
+            self.assertEqual(self.mode(cache / d), 0o700, d)
+        self.assertEqual(self.mode(old_thumb), 0o600)
+        self.assertEqual(self.mode(cache / "library.json"), 0o600)
+        self.assertEqual(self.mode(target), 0o644)
+
+    def test_frame_thumb_reads_local_files_only_and_is_private(self):
+        dest = Path(self.tmp.name) / "cache" / "library" / "x.jpg"
+        lw.private_dir(dest.parent)
+        calls = []
+
+        def fake_ffmpeg(cmd, **kw):
+            calls.append((cmd, kw))
+            Path(cmd[-1]).write_bytes(b"jpg")
+            os.chmod(cmd[-1], 0o644)
+            return subprocess.CompletedProcess(cmd, 0)
+
+        with mock.patch.object(lw.subprocess, "run", side_effect=fake_ffmpeg):
+            self.assertEqual(REAL_FRAME_THUMB(self.outside / "v.mp4", dest, 12), str(dest))
+        cmd, kw = calls[0]
+        self.assertEqual(cmd[cmd.index("-protocol_whitelist") + 1], "file")
+        self.assertLess(cmd.index("-protocol_whitelist"), cmd.index("-i"))
+        self.assertEqual(kw.get("umask"), 0o077)
+        self.assertEqual(self.mode(dest), 0o600)
+
+    def test_settings_are_private(self):
+        state = Path(self.tmp.name) / "state"
+        with mock.patch.object(lw, "STATE_DIR", state), \
+             mock.patch.object(lw, "SETTINGS_FILE", state / "settings.json"):
+            self.run_cmd(lw.cmd_set_quality, "1080")
+            self.assertEqual(lw.read_quality(), "1080")
+        self.assertEqual((self.mode(state), self.mode(state / "settings.json")), (0o700, 0o600))
 
     def test_safe_name(self):
         self.assertEqual(lw.safe_name("../../.bashrc.mp4"), "bashrc.mp4")

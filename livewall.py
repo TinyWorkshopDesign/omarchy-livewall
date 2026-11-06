@@ -50,7 +50,7 @@ CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "livewall"
 THUMB_DIR = CACHE_DIR / "thumbs"
 SEARCH_DIR = CACHE_DIR / "search"
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 UA = f"omarchy-livewall/{VERSION}"
 TIMEOUT = 20
 PER_PAGE = 24
@@ -76,6 +76,47 @@ def out(obj):
 def fail(code, detail=""):
     out({"ok": False, "code": code, "detail": str(detail)[:200]})
     sys.exit(1)
+
+
+# ------------------------------------------------------- private storage
+# Thumbnails, caches and copies can show what is in the user's own videos,
+# so they are only readable by the user, whatever the umask.
+def private_dir(path):
+    """Create path as a 0700 directory, or tighten it if it already exists."""
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(path, 0o700)
+
+
+def write_private(path, data):
+    """Write data atomically to path as a 0600 file."""
+    if isinstance(data, str):
+        data = data.encode()
+    tmp = path.with_name(path.name + ".part")
+    tmp.unlink(missing_ok=True)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def prepare_cache():
+    """Make the cache private, including files left readable by versions before 1.1.1."""
+    private_dir(CACHE_DIR)
+    for base, dirs, files in os.walk(CACHE_DIR):
+        for names, mode in ((dirs, 0o700), (files, 0o600)):
+            for n in names:
+                p = os.path.join(base, n)
+                if not os.path.islink(p):
+                    try:
+                        os.chmod(p, mode)
+                    except OSError:
+                        pass
+    for d in (THUMB_DIR, SEARCH_DIR, LIB_THUMB_DIR):
+        private_dir(d)
 
 
 # ---------------------------------------------------------------- network
@@ -343,10 +384,8 @@ def resolve_quality(q, mons=None):
 def cmd_set_quality(q):
     if not (q == "auto" or (q.isdigit() and int(q) in QUALITIES)):
         fail("usage")
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = SETTINGS_FILE.with_suffix(".part")
-    tmp.write_text(json.dumps({"quality": q}))
-    tmp.replace(SETTINGS_FILE)
+    private_dir(STATE_DIR)
+    write_private(SETTINGS_FILE, json.dumps({"quality": q}))
     out({"ok": True, "quality": q})
 
 
@@ -370,7 +409,7 @@ def cmd_key_set(name):
         prov.test(key)
     except LWError as e:
         fail(e.code, prov.label if e.code == "key_rejected" else e.detail)
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    private_dir(STATE_DIR)
     fd = os.open(key_file(name), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(key + "\n")
@@ -388,9 +427,7 @@ def fetch_thumb(prefix, vid, url):
     try:
         with _open(url) as r:
             data = _read_limited(r, MAX_THUMB)
-        tmp = dest.with_suffix(".part")
-        tmp.write_bytes(data)
-        tmp.replace(dest)
+        write_private(dest, data)
         return str(dest)
     except Exception:
         return ""
@@ -417,10 +454,7 @@ def cached_search(prov, key, query, page, lang):
         pass
     raw, total, has_next = prov.search(key, query, page, lang)
     try:
-        SEARCH_DIR.mkdir(parents=True, exist_ok=True)
-        tmp = cache.with_suffix(".part")
-        tmp.write_text(json.dumps({"raw": raw, "total": total, "next": has_next}))
-        tmp.replace(cache)
+        write_private(cache, json.dumps({"raw": raw, "total": total, "next": has_next}))
     except OSError:
         pass
     return raw, total, has_next
@@ -441,6 +475,10 @@ def cmd_search(query, page, lang="en", quality="auto"):
     if not re.fullmatch(r"[a-z]{2,3}", lang):
         lang = "en"
     try:
+        prepare_cache()
+    except OSError as e:
+        fail("io", e.strerror or e)
+    try:
         raw, total, has_next = cached_search(prov, key, query, page, lang)
     except LWError as e:
         fail(e.code, prov.label if e.code == "key_rejected" else e.detail)
@@ -449,7 +487,6 @@ def cmd_search(query, page, lang="en", quality="auto"):
     for r in raw:
         r["file"] = pick(r.get("files") or [], q)
     items = [r for r in raw if r["id"] > 0 and r["file"]]
-    THUMB_DIR.mkdir(parents=True, exist_ok=True)
     with ThreadPoolExecutor(max_workers=8) as pool:
         thumbs = list(pool.map(lambda it: fetch_thumb(prov.name, it["id"], it["thumbUrl"]), items))
     have = downloaded_ids(prov)
@@ -607,7 +644,7 @@ def known_titles():
 def probe(path):
     """(width, height, seconds) of the first video stream; zeros if there is none or ffprobe is missing."""
     try:
-        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+        r = subprocess.run(["ffprobe", "-v", "error", "-protocol_whitelist", "file", "-select_streams", "v:0",
                             "-show_entries", "stream=width,height:format=duration", "-of", "json", str(path)],
                            capture_output=True, text=True, timeout=15)
         d = json.loads(r.stdout or "{}")
@@ -624,10 +661,14 @@ def frame_thumb(path, dest, seconds):
     tmp = dest.with_name(dest.stem + ".tmp.jpg")
     at = str(min(2.0, seconds / 3)) if seconds > 0 else "0"
     try:
-        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", at, "-i", str(path),
+        # Local files only: a file that is really a playlist cannot make
+        # ffmpeg fetch anything from the network. umask 077 keeps the frame private.
+        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-protocol_whitelist", "file",
+                        "-ss", at, "-i", str(path),
                         "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", str(tmp)],
-                       capture_output=True, timeout=30)
+                       capture_output=True, timeout=30, umask=0o077)
         if tmp.is_file() and tmp.stat().st_size > 0:
+            os.chmod(tmp, 0o600)
             tmp.replace(dest)
             return str(dest)
     except (OSError, subprocess.TimeoutExpired):
@@ -681,15 +722,16 @@ def cmd_library():
     except (OSError, ValueError):
         meta = {}
     titles = known_titles()
-    LIB_THUMB_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        prepare_cache()
+    except OSError as e:
+        fail("io", e.strerror or e)
     with ThreadPoolExecutor(max_workers=4) as pool:
         done = list(pool.map(lambda x: library_item(*x, meta, titles, current, theme), files))
     new_meta = {sig: m for sig, m, _ in done}
     if new_meta != meta:
         try:
-            tmp = LIB_META.with_suffix(".part")
-            tmp.write_text(json.dumps(new_meta))
-            tmp.replace(LIB_META)
+            write_private(LIB_META, json.dumps(new_meta))
         except OSError:
             pass
     items = [it for _, _, it in done]
@@ -767,7 +809,13 @@ def add_one(src_arg, dest_dir):
         n += 1
     tmp = dest_dir / f".{dest.name}.part"
     try:
-        shutil.copyfile(src, tmp)
+        # The copy is private (0600) whatever the source mode or umask:
+        # the source may be a private video, and the backgrounds folder
+        # is usually readable by other accounts.
+        tmp.unlink(missing_ok=True)
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as dst, open(src, "rb") as s:
+            shutil.copyfileobj(s, dst, 1024 * 1024)
         tmp.replace(dest)
     except OSError as e:
         tmp.unlink(missing_ok=True)
@@ -783,7 +831,10 @@ def cmd_add(args):
         fail("usage")
     dest_dir = BG_ROOT / theme_slug()
     try:
-        dest_dir.mkdir(parents=True, exist_ok=True)
+        if not dest_dir.is_dir():
+            # A theme folder made here holds only your own videos: keep it private.
+            # An existing folder belongs to Omarchy and is left as it is.
+            dest_dir.mkdir(parents=True, mode=0o700)
     except OSError as e:
         fail("io", e.strerror or e)
     added, existing, errors = [], [], []
