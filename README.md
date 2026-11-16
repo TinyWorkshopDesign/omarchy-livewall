@@ -1,5 +1,7 @@
 # Livewall
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/K8C82AR8S0)
+
 Search free video wallpapers on Pixabay from your Omarchy desktop and set one as your animated background with a single click.
 
 ![Livewall panel showing a grid of aurora video results](preview.png)
